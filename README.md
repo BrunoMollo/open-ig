@@ -168,6 +168,15 @@ npx tsc --noEmit --target esnext --module esnext --moduleResolution bundler --li
 npx eslint src/webview/injectedJavaScript.ts src/webview/main.ts src/webview/modules/*.ts
 ```
 
+
+## Build
+
+If tou need to build and deploy the app, follow the instructions in the following files:
+
+- Android: ./docs/android.md
+- iOS: [pending]
+
+
 ## Important note
 
 This application is intentionally a `WebView` container. Most product customization does not live in native components, but in the injected task clip and its mods.

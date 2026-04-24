@@ -1,7 +1,3 @@
-# AGENTS
-
-Always read the README.md file before starting to work on the project.
-
-## Documentation language
-
+- Always read the README.md file before starting to work on the project.
+- if you create a new documentation (as a .md file), reference it in the README.md file.
 - Always write documentation-oriented code and developer-facing documentation in English, even if the developer is communicating in another language such as Spanish.
