@@ -1,4 +1,5 @@
 import { buildInjectedAppScript, type InjectedModuleRegistration } from './main';
+import { buildReelsButtonRemoverModuleScript } from './modules/reelsButtonRemover';
 import { buildSuggestedReelsBlockerModuleScript } from './modules/suggestedReelsBlocker';
 
 export type WebViewBridgeMessage =
@@ -12,6 +13,12 @@ const injectedModules: InjectedModuleRegistration[] = [
     key: 'suggestedReelsBlocker',
     factoryName: 'createSuggestedReelsBlocker',
     script: buildSuggestedReelsBlockerModuleScript(),
+    autoStart: true,
+  },
+  {
+    key: 'reelsButtonRemover',
+    factoryName: 'createReelsButtonRemover',
+    script: buildReelsButtonRemoverModuleScript(),
     autoStart: true,
   },
 ];
