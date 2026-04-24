@@ -1,50 +1,173 @@
-# Welcome to your Expo app 👋
+# Open IG
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile app built with Expo whose only visible content is an Instagram `WebView`.
 
-## Get started
+The app does not recreate Instagram's UI in React Native. Instead, it loads `https://www.instagram.com/` inside a `WebView` and then injects a task clip before the page finishes loading in order to modify behavior, DOM, and storage through JavaScript.
 
-1. Install dependencies
+## What the app does
 
-   ```bash
-   npm install
-   ```
+- Renders a fullscreen `WebView` pointing to Instagram.
+- Keeps cookies and DOM storage to preserve the session.
+- Opens external navigation outside the `WebView`.
+- Handles the Android back button using the `WebView` history.
+- Injects an early script with mods to alter the Instagram experience.
 
-2. Start the app
+## Structure
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+App.tsx
+src/
+  features/
+    instagram/
+      InstagramWebView.tsx
+  webview/
+    injectedJavaScript.ts
+    main.ts
+    modules/
+      appInstallBannerSuppressor.ts
+      reelsButtonRemover.ts
+      suggestedReelsBlocker.ts
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## General flow
 
-## Learn more
+### 1. App entrypoint
 
-To learn more about developing your project with Expo, look at the following resources:
+[App.tsx](/Users/bruno/personal/open-ig/App.tsx:1) only mounts [InstagramWebView.tsx](/Users/bruno/personal/open-ig/src/features/instagram/InstagramWebView.tsx:1).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 2. Native container
 
-## Join the community
+[InstagramWebView.tsx](/Users/bruno/personal/open-ig/src/features/instagram/InstagramWebView.tsx:1) is the place where the React Native layer lives:
 
-Join our community of developers creating universal apps.
+- creates the `WebView`
+- loads `https://www.instagram.com/`
+- uses `injectedJavaScriptBeforeContentLoaded`
+- intercepts external navigation
+- listens for messages sent from the injected script
+- handles Android back behavior
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 3. Injected task clip
+
+[injectedJavaScript.ts](/Users/bruno/personal/open-ig/src/webview/injectedJavaScript.ts:1) builds the task clip that gets injected into the page.
+
+That file should not contain large product-specific logic. Its responsibility is to:
+
+- declare which mods exist
+- register each mod
+- delegate to a shared assembler
+
+### 4. Shared runtime
+
+[main.ts](/Users/bruno/personal/open-ig/src/webview/main.ts:1) generates the final script that:
+
+- creates `window.__OPEN_IG__`
+- exposes `postMessage`
+- instantiates registered modules
+- automatically runs the modules marked with `autoStart`
+
+### 5. Mods
+
+Each file inside [src/webview/modules](/Users/bruno/personal/open-ig/src/webview/modules) represents an independent modification.
+
+Current mods:
+
+- `appInstallBannerSuppressor`: writes `ig_uta_b` into `localStorage` before page load to avoid the banner recommending the native app.
+- `suggestedReelsBlocker`: removes suggested Reels nodes when it detects `[data-reel-type="suggested"]`.
+- `reelsButtonRemover`: removes the third-level ancestor of anchors that point to `/reels` or `/reels/`.
+
+## How to add a new mod
+
+### 1. Create the module file
+
+Add a new file inside `src/webview/modules/`.
+
+Example:
+
+```ts
+export function buildMyNewModuleScript(): string {
+  return `
+    function createMyNewModule() {
+      function start() {
+        // mod logic
+      }
+
+      return {
+        start: start,
+        stop: function() {},
+      };
+    }
+  `;
+}
+```
+
+Practical rules:
+
+- The module must return a script as a string.
+- Inside that script there must be a global factory, for example `createMyNewModule`.
+- That factory must return an object with `start()` and optionally `stop()`.
+- If the mod touches the DOM frequently, prefer `MutationObserver` with specific filters and batching through `requestAnimationFrame`.
+- Avoid full-document scans on every mutation.
+
+### 2. Register the mod
+
+Import it in [injectedJavaScript.ts](/Users/bruno/personal/open-ig/src/webview/injectedJavaScript.ts:1) and add it to the `injectedModules` array.
+
+Example:
+
+```ts
+import { buildMyNewModuleScript } from './modules/myNewModule';
+
+const injectedModules: InjectedModuleRegistration[] = [
+  {
+    key: 'myNewModule',
+    factoryName: 'createMyNewModule',
+    script: buildMyNewModuleScript(),
+    autoStart: true,
+  },
+];
+```
+
+Fields:
+
+- `key`: public name inside `window.__OPEN_IG__.modules`
+- `factoryName`: exact name of the function created inside the module string
+- `script`: string generated by the module
+- `autoStart`: if `true`, the runtime automatically executes `start()`
+
+## Conventions
+
+- Keep each mod isolated in its own file.
+- Do not mix multiple product changes into the same module.
+- Keep `injectedJavaScript.ts` as a registry/assembler, not a place for feature-specific logic.
+- If a mod depends on storage or early setup, it should live in the task clip that runs before content is loaded.
+- If a mod operates on dynamic DOM, use selective observation instead of polling.
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the app:
+
+```bash
+npx expo start
+```
+
+## Recommended validation when editing mods
+
+To validate only the injection layer:
+
+```bash
+npx tsc --noEmit --target esnext --module esnext --moduleResolution bundler --lib esnext,dom --skipLibCheck src/webview/injectedJavaScript.ts src/webview/main.ts src/webview/modules/*.ts
+```
+
+```bash
+npx eslint src/webview/injectedJavaScript.ts src/webview/main.ts src/webview/modules/*.ts
+```
+
+## Important note
+
+This application is intentionally a `WebView` container. Most product customization does not live in native components, but in the injected task clip and its mods.
