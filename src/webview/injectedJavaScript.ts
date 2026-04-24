@@ -1,3 +1,4 @@
+import { buildAppInstallBannerSuppressorModuleScript } from './modules/appInstallBannerSuppressor';
 import { buildInjectedAppScript, type InjectedModuleRegistration } from './main';
 import { buildReelsButtonRemoverModuleScript } from './modules/reelsButtonRemover';
 import { buildSuggestedReelsBlockerModuleScript } from './modules/suggestedReelsBlocker';
@@ -9,6 +10,12 @@ export type WebViewBridgeMessage =
 
 const BRIDGE_NAMESPACE = '__OPEN_IG__';
 const injectedModules: InjectedModuleRegistration[] = [
+  {
+    key: 'appInstallBannerSuppressor',
+    factoryName: 'createAppInstallBannerSuppressor',
+    script: buildAppInstallBannerSuppressorModuleScript(),
+    autoStart: true,
+  },
   {
     key: 'suggestedReelsBlocker',
     factoryName: 'createSuggestedReelsBlocker',
