@@ -1,36 +1,23 @@
+import { buildInjectedAppScript, type InjectedModuleRegistration } from './main';
+import { buildSuggestedReelsBlockerModuleScript } from './modules/suggestedReelsBlocker';
+
 export type WebViewBridgeMessage =
   | { type: 'bridge-ready' }
   | { type: 'log'; payload: string }
   | { type: 'custom-event'; payload?: unknown };
 
 const BRIDGE_NAMESPACE = '__OPEN_IG__';
+const injectedModules: InjectedModuleRegistration[] = [
+  {
+    key: 'suggestedReelsBlocker',
+    factoryName: 'createSuggestedReelsBlocker',
+    script: buildSuggestedReelsBlockerModuleScript(),
+    autoStart: true,
+  },
+];
 
 export function buildInjectedJavaScript(): string {
-  return `
-    (function() {
-      if (window.${BRIDGE_NAMESPACE} && window.${BRIDGE_NAMESPACE}.bridgeReady) {
-        return true;
-      }
-
-      function postMessage(message) {
-        try {
-          window.ReactNativeWebView.postMessage(JSON.stringify(message));
-        } catch (error) {
-          // Ignore bridge errors inside the page context.
-        }
-      }
-
-      window.${BRIDGE_NAMESPACE} = {
-        bridgeReady: true,
-        version: '1.0.0',
-        postMessage: postMessage,
-      };
-
-      postMessage({ type: 'bridge-ready' });
-      return true;
-    })();
-    true;
-  `;
+  return buildInjectedAppScript(BRIDGE_NAMESPACE, injectedModules);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

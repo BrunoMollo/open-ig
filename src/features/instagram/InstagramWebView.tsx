@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   Linking,
@@ -46,7 +46,7 @@ function handleBridgeMessage(message: WebViewBridgeMessage) {
 export function InstagramWebView() {
   const webViewRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
-  const injectedJavaScript = buildInjectedJavaScript();
+  const injectedJavaScript = useMemo(() => buildInjectedJavaScript(), []);
 
   useEffect(() => {
     if (Platform.OS !== 'android') {
