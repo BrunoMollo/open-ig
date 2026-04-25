@@ -1,8 +1,11 @@
-# Open IG
+# Open IG - An Instagram alternative to avoid doomscrolling  
 
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/a9d1c7ba-867e-4427-828a-6c8ce795f4c2" />
+
+## How it works
 Mobile app built with Expo whose only visible content is an Instagram `WebView`.
 
-The app does not recreate Instagram's UI in React Native. Instead, it loads `https://www.instagram.com/` inside a `WebView` and then injects a task clip before the page finishes loading in order to modify behavior, DOM, and storage through JavaScript.
+The app does not recreate Instagram's UI. Instead, it loads `https://www.instagram.com/` inside a `WebView` and then injects a task clip before the page finishes loading in order to modify behavior, DOM, and storage through JavaScript.
 
 ## What the app does
 
